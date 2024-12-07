@@ -1,8 +1,3 @@
----
-title: Socioeconomic Determinants of Individual Income
-
----
-
 Socioeconomic Determinants of Individual Income
 ===
 
