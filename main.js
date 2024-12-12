@@ -153,7 +153,7 @@ function doublecircularbarchartPlot(data){
         .append("g")
         .attr("transform", `translate(${margin.left + 100 + 100}, ${margin.top + 200})`);
 
-    console.log(height, width);
+    data = data.filter(d => d["occupation"] !== "?");
     const occupationData = d3.rollup(data, 
         v => ({
             count: v.length,
@@ -176,7 +176,7 @@ function doublecircularbarchartPlot(data){
     .domain([0, d3.max(Array.from(occupationData.values()), d => d.count)]);
 
     const ybis = d3.scaleRadial()
-    .range([innerRadius, outerRadius])
+    .range([innerRadius, innerRadius-50])
     .domain([0, d3.max(Array.from(occupationData.values()), d => d.avgWorkTime)]);
 
     // outer circle
@@ -200,8 +200,8 @@ function doublecircularbarchartPlot(data){
     .join("path")
     .attr("fill", "red")
     .attr("d", d3.arc()
-        .innerRadius(d => ybis(0)) 
-        .outerRadius(d => ybis(d[1].avgWorkTime)) 
+        .innerRadius(d => ybis(d[1].avgWorkTime)) 
+        .outerRadius(innerRadius) 
         .startAngle(d => x(d[0]))
         .endAngle(d => x(d[0]) + x.bandwidth())
         .padAngle(0.01)
