@@ -25,8 +25,8 @@ Eventhough there are many factor columns of it, some factor we may not consider 
 - relationship
 > Relationship of this individual with others, for example, spouse (Husband). Each data point has only one relationship.
 - race
-- education.num
-> Highest level of education achieved by an individual in numerical form.
+- education
+> Highest level of education achieved by an individual.
 - age
 - occupation
 > General type of occupation of an individual.
