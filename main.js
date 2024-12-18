@@ -4,14 +4,33 @@ async function loadData(){
 
 function processedData(data){
     data.forEach((person) => {
-        person["education.num"] = +person["education.num"];
         person.age = +person.age === 17 ? 18 : +person.age;
         person["hours.per.week"] = +person["hours.per.week"];
         person.income = person.income === ">50K" ? true : false;
     });
 }
 
+let selected_feature_value = null;
 function distributionPlot(data) {
+    function updateLabel(type, value) {
+        const id = `income-${type}-value`;
+        document.getElementById(id).textContent = value + '%';
+    }
+    console.log(data);
+
+    if(selected_feature_value != null){
+        data = data.filter(d => d[selectedFeature] === selected_feature_value);
+    }
+
+    let total = data.length;
+    let greater_50k = data.filter(d => d.income === true).length;
+    let less_50k = data.filter(d => d.income === false).length;
+    let greater_50k_percent = (greater_50k / total) * 100;
+    let less_50k_percent = (less_50k / total) * 100;
+
+    updateLabel("true", greater_50k_percent.toFixed(2));
+    updateLabel("false", less_50k_percent.toFixed(2));
+
     const margin = { top: 10, right: 30, bottom: 30, left: 60 },
         width = 1200 - margin.left - margin.right,
         height = 400 - margin.top - margin.bottom;
@@ -35,12 +54,17 @@ function distributionPlot(data) {
 
     const bins = histogram(data);
 
+    bins.forEach(bin => {
+        bin.trueCount = bin.filter(d => d.income === true).length;
+        bin.falseCount = bin.filter(d => d.income === false).length;
+    });
+
     const x = d3.scaleLinear()
         .domain([bins[0].x0, bins[bins.length - 1].x1])
         .range([0, width]);
 
-    const y = d3.scaleLinear()
-        .domain([0, d3.max(bins, d => d.length)])
+        const y = d3.scaleLinear()
+        .domain([0, d3.max(bins, d => d.trueCount + d.falseCount) || 1])
         .range([height, 0]);
 
     svg.append("g")
@@ -53,15 +77,77 @@ function distributionPlot(data) {
 
     svg.append("g").call(d3.axisLeft(y));
 
-    svg.selectAll("rect")
-        .data(bins)
-        .enter()
-        .append("rect")
-        .attr("x", d => x(d.x0))
-        .attr("y", d => y(d.length))
-        .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
-        .attr("height", d => height - y(d.length))
-        .style("fill", "#69b3a2");
+    svg.selectAll(".bar-false")
+    .data(bins)
+    .enter()
+    .append("rect")
+    .attr("class", "bar-false")
+    .attr("x", d => x(d.x0))
+    .attr("y", height)
+    .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+    .attr("height", 0)
+    .style("fill", "red")
+    .transition()
+    .duration(1000)
+    .attr("y", d => y(d.falseCount)) 
+    .attr("height", d => height - y(d.falseCount)); 
+
+    svg.selectAll(".bar-true")
+    .data(bins)
+    .enter()
+    .append("rect")
+    .attr("class", "bar-true")
+    .attr("x", d => x(d.x0))
+    .attr("y", height)
+    .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+    .attr("height", 0)
+    .style("fill", "green")
+    .transition()
+    .duration(1000)
+    .attr("y", d => y(d.falseCount + d.trueCount)) 
+    .attr("height", d => y(d.falseCount) - y(d.falseCount + d.trueCount));
+
+    const brush = d3.brushX()
+    .extent([[0, 0], [width, height]])
+    .on("start brush", brushed); 
+
+    svg.append("g")
+        .attr("class", "brush")
+        .call(brush);
+
+    function brushed(event) {
+        const selection = event.selection;
+        if (selection) {
+            const [x0, x1] = selection;
+            const selectedBins = bins.filter(d => {
+                const binLeft = x(d.x0);
+                const binRight = x(d.x1);
+                return (binLeft >= x0 && binLeft <= x1) || (binRight >= x0 && binRight <= x1);
+            });
+
+            svg.selectAll(".bar-false")
+                .style("fill", function (d) {
+                    return selectedBins.includes(d) ? "orange" : "red";
+                });
+            svg.selectAll(".bar-true")
+                .style("fill", function (d) {
+                    return selectedBins.includes(d) ? "lightgreen" : "green";
+                });
+
+            let total_bins = [];
+            selectedBins.forEach(bin => {
+                total_bins = total_bins.concat(bin);
+            });
+            let selected_greater_50k = total_bins.filter(d => d.income === true).length;
+            let selected_less_50k = total_bins.filter(d => d.income === false).length;
+            updateLabel("true", ((selected_greater_50k / total) * 100).toFixed(2));
+            updateLabel("false", ((selected_less_50k / total) * 100).toFixed(2));
+            if (total_bins.length === 0) {
+                updateLabel("true", greater_50k_percent.toFixed(2));
+                updateLabel("false", less_50k_percent.toFixed(2));
+            }
+        }
+    }
 
     svg.append("text")
         .attr("x", width / 2)
@@ -77,8 +163,8 @@ function distributionPlot(data) {
         .text("Numbers of People");
 }
 
-const selectedFeature = "education.num";
-// selector function
+
+let selectedFeature = "sex";
 function barchartPlot(data, selectedFeature) {
     const margin = { top: 30, right: 100, bottom: 30, left: 60 },
         width = 1200 - margin.left - margin.right,
@@ -102,7 +188,7 @@ function barchartPlot(data, selectedFeature) {
         count: count 
     }));
     processedData.sort((a, b) => a.key - b.key);
-    console.log(processedData);
+    //console.log(processedData);
 
     const x = d3.scaleBand()
         .domain(processedData.map(d => d.key))
@@ -117,10 +203,12 @@ function barchartPlot(data, selectedFeature) {
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x))
         .selectAll("text")
-        .style("text-anchor", "middle");
+        .style("text-anchor", "middle")
+        .style("font-size", "11px");
 
     svg.append("g")
-        .call(d3.axisLeft(y));
+        .call(d3.axisLeft(y))
+        .style("font-size", "15px");
 
     svg.selectAll(".bar")
         .data(processedData)
@@ -132,14 +220,25 @@ function barchartPlot(data, selectedFeature) {
         .attr("height", 0)
         .attr("fill", "#69b3a2")
         .style("cursor", "pointer")
+        .style("stroke", "none")
+        .style("stroke-width", "2px")
         .on("click", function(event, d) {
+            svg.selectAll(".bar")
+            .style("stroke", "none")
+            .style("stroke-width", "2px");
+            d3.select(this)
+            .style("stroke", "black")
+            .style("stroke-width", "4px");
+            selected_feature_value = d.key;
             doublecircularbarchartPlot(data, d.key)
             d3.select("#doublecircularbarchartPlot").select("svg").remove()
+            distributionPlot(data.filter(data => data[selectedFeature] === d.key));
+            d3.select("#distributionPlot").select("svg").remove()
         })
         .transition()
-            .duration(1000) // 動畫持續時間 1000ms
-            .attr("y", d => y(d.count)) // 動態改變 y 座標
-            .attr("height", d => height - y(d.count)); // 動態改變高度
+            .duration(1000)
+            .attr("y", d => y(d.count)) 
+            .attr("height", d => height - y(d.count));
 
     svg.selectAll(".label")
         .data(processedData)
@@ -147,15 +246,15 @@ function barchartPlot(data, selectedFeature) {
         .attr("x", d => x(d.key) + x.bandwidth() / 2)
         .attr("y", d => y(d.count) - 5)
         .attr("text-anchor", "middle")
-        .text(d => d.count);
+        .text(d => d.count)
 }
 
 const selectedKey = null;
 function doublecircularbarchartPlot(data, selectedKey){
-    console.log(selectedKey, selectedFeature);
+    //console.log(selectedKey, selectedFeature);
     const margin = { top: 10, right: 30, bottom: 30, left: 60 },
-        width = 1200 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
+        width = 500 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
 
     const svg = d3.select("#doublecircularbarchartPlot")
         .append("svg")
@@ -207,6 +306,11 @@ function doublecircularbarchartPlot(data, selectedKey){
         .endAngle(d => x(d[0]) + x.bandwidth())
         .padAngle(0.01)
         .padRadius(innerRadius))
+    .style("cursor", "pointer")
+    .on("click", (event, d) => {
+        distributionPlot(data.filter(data => data["occupation"] === d[0]));
+        d3.select("#distributionPlot").select("svg").remove()
+    })
     .transition()
     .duration(1000)
     .attr("d", d3.arc()
@@ -217,6 +321,7 @@ function doublecircularbarchartPlot(data, selectedKey){
         .padAngle(0.01)
         .padRadius(innerRadius));
 
+
     // inner circle
     svg.append("g")
     .selectAll("path")
@@ -224,12 +329,18 @@ function doublecircularbarchartPlot(data, selectedKey){
     .join("path")
     .attr("fill", "red")
     .attr("d", d3.arc()
-        .innerRadius(innerRadius)  // 內圓的半徑固定
-        .outerRadius(innerRadius-1)  // 初始外圓半徑為最大值
+        .innerRadius(innerRadius)
+        .outerRadius(innerRadius-1)
         .startAngle(d => x(d[0]))
         .endAngle(d => x(d[0]) + x.bandwidth())
         .padAngle(0.01)
         .padRadius(innerRadius))
+    .style("cursor", "pointer")
+    .on("click", (event, d) => {
+        distributionPlot(data.filter(data => data["occupation"] === d[0]));
+        d3.select("#distributionPlot").select("svg").remove()
+
+    })
     .transition()  // 啟用過渡動畫
     .duration(1000)  // 設定動畫持續時間
     .attr("d", d3.arc()
@@ -256,7 +367,8 @@ function doublecircularbarchartPlot(data, selectedKey){
     .attr("transform", function(d) {
         return (x(d[0]) + x.bandwidth() / 2 + Math.PI) % (2 * Math.PI) < Math.PI ? "rotate(180)" : "rotate(0)";
     })
-    .style("font-size", "11px")
+    .style("font-size", "13px")
+    .style("user-select","none")
     .attr("alignment-baseline", "middle");
 }
 
@@ -268,4 +380,16 @@ document.addEventListener("DOMContentLoaded", async function(){
     distributionPlot(data);
     barchartPlot(data, selectedFeature);
     doublecircularbarchartPlot(data, selectedKey);
+
+    const selector = document.getElementById("selector");
+    selector.addEventListener("change", function(event){
+        selectedFeature = event.target.value;
+        d3.select("#barchartPlot").select("svg").remove();
+        barchartPlot(data, selectedFeature);
+        d3.select("#doublecircularbarchartPlot").select("svg").remove();
+        doublecircularbarchartPlot(data, selectedKey);
+        d3.select("#distributionPlot").select("svg").remove();
+        selected_feature_value = null;
+        distributionPlot(data);
+    });
 });
