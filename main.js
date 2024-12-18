@@ -109,10 +109,10 @@ function distributionPlot(data) {
 }
 
 
-const selectedFeature = "relationship";
+const selectedFeature = "education.num";
 // selector function
 function barchartPlot(data, selectedFeature) {
-    const margin = { top: 10, right: 30, bottom: 30, left: 60 },
+    const margin = { top: 30, right: 100, bottom: 30, left: 60 },
         width = 1200 - margin.left - margin.right,
         height = 400 - margin.top - margin.bottom;
 
@@ -159,10 +159,19 @@ function barchartPlot(data, selectedFeature) {
         .enter().append("rect")
         .attr("class", "bar")
         .attr("x", d => x(d.key))
-        .attr("y", d => y(d.count))
+        .attr("y", height)
         .attr("width", x.bandwidth())
-        .attr("height", d => height - y(d.count))
-        .attr("fill", "#69b3a2");
+        .attr("height", 0)
+        .attr("fill", "#69b3a2")
+        .style("cursor", "pointer")
+        .on("click", function(event, d) {
+            doublecircularbarchartPlot(data, d.key)
+            d3.select("#doublecircularbarchartPlot").select("svg").remove()
+        })
+        .transition()
+            .duration(1000) // 動畫持續時間 1000ms
+            .attr("y", d => y(d.count)) // 動態改變 y 座標
+            .attr("height", d => height - y(d.count)); // 動態改變高度
 
     svg.selectAll(".label")
         .data(processedData)
@@ -173,7 +182,9 @@ function barchartPlot(data, selectedFeature) {
         .text(d => d.count);
 }
 
-function doublecircularbarchartPlot(data){
+const selectedKey = null;
+function doublecircularbarchartPlot(data, selectedKey){
+    console.log(selectedKey, selectedFeature);
     const margin = { top: 10, right: 30, bottom: 30, left: 60 },
         width = 1200 - margin.left - margin.right,
         height = 400 - margin.top - margin.bottom;
@@ -185,6 +196,9 @@ function doublecircularbarchartPlot(data){
         .append("g")
         .attr("transform", `translate(${margin.left + 100 + 100}, ${margin.top + 200})`);
 
+    if (selectedKey != null) {
+        data = data.filter(d => d[selectedFeature] == selectedKey);
+    }
     data = data.filter(d => d["occupation"] !== "?");
     const occupationData = d3.rollup(data, 
         v => ({
@@ -195,8 +209,8 @@ function doublecircularbarchartPlot(data){
     );
     console.log(occupationData);
     
-    const innerRadius = 90;
-    const outerRadius = Math.min(width, height) / 2 - 40;
+    const innerRadius = 100;
+    const outerRadius = Math.min(width, height)-200;
 
     const x = d3.scaleBand()
     .range([0, 2 * Math.PI])
@@ -206,6 +220,7 @@ function doublecircularbarchartPlot(data){
     const y = d3.scaleRadial()
     .range([innerRadius, outerRadius])
     .domain([0, d3.max(Array.from(occupationData.values()), d => d.count)]);
+    console.log(y.domain());
 
     const ybis = d3.scaleRadial()
     .range([innerRadius, innerRadius-50])
@@ -217,6 +232,15 @@ function doublecircularbarchartPlot(data){
     .data(Array.from(occupationData.entries()))
     .join("path")
     .attr("fill", "#69b3a2")
+    .attr("d", d3.arc()
+        .innerRadius(innerRadius)
+        .outerRadius(innerRadius+1) 
+        .startAngle(d => x(d[0]))
+        .endAngle(d => x(d[0]) + x.bandwidth())
+        .padAngle(0.01)
+        .padRadius(innerRadius))
+    .transition()
+    .duration(1000)
     .attr("d", d3.arc()
         .innerRadius(innerRadius)
         .outerRadius(d => y(d[1].count)) 
@@ -232,8 +256,17 @@ function doublecircularbarchartPlot(data){
     .join("path")
     .attr("fill", "red")
     .attr("d", d3.arc()
-        .innerRadius(d => ybis(d[1].avgWorkTime)) 
-        .outerRadius(innerRadius) 
+        .innerRadius(innerRadius)  // 內圓的半徑固定
+        .outerRadius(innerRadius-1)  // 初始外圓半徑為最大值
+        .startAngle(d => x(d[0]))
+        .endAngle(d => x(d[0]) + x.bandwidth())
+        .padAngle(0.01)
+        .padRadius(innerRadius))
+    .transition()  // 啟用過渡動畫
+    .duration(1000)  // 設定動畫持續時間
+    .attr("d", d3.arc()
+        .innerRadius(innerRadius)  // 內圓半徑不變
+        .outerRadius(d => ybis(d[1].avgWorkTime))  // 動態改變外圓半徑
         .startAngle(d => x(d[0]))
         .endAngle(d => x(d[0]) + x.bandwidth())
         .padAngle(0.01)
@@ -266,5 +299,5 @@ document.addEventListener("DOMContentLoaded", async function(){
     console.log(data);
     distributionPlot(data);
     barchartPlot(data, selectedFeature);
-    doublecircularbarchartPlot(data);
+    doublecircularbarchartPlot(data, selectedKey);
 });
