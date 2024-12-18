@@ -16,7 +16,6 @@ function distributionPlot(data) {
         const id = `income-${type}-value`;
         document.getElementById(id).textContent = value + '%';
     }
-    console.log(data);
 
     if(selected_feature_value != null){
         data = data.filter(d => d[selectedFeature] === selected_feature_value);
