@@ -8,8 +8,24 @@
 <body>
 	<script src="https://d3js.org/d3.v6.min.js"></script>
 	<script src = "main.js"></script>
-	<!-- <div id="distributionPlot"></div> -->
-	<!-- <div id="barchartPlot"></div> -->
+	<div id="chart-container" style="display: flex; align-items: center;">
+		<div id="distributionPlot"></div>
+		<div id="legend" style="margin-left: 20px;">
+			<div id="legend-item">
+				<span id="color-square-true" style="display: inline-block; width: 20px; height: 20px; background-color: green; margin-right: 5px;"></span>
+				<span id="legend-text-true">Income >= 50K: <span id="income-true-value">test</span></span>
+			  </div>
+			<div id="legend-item">
+			<span id="color-square-false" style="display: inline-block; width: 20px; height: 20px; background-color: red; margin-right: 5px;"></span>
+			<span id="legend-text-false">Income < 50K: <span id="income-false-value">test</span></span>
+		  </div>
+		  <div>
+			<span id="unit">USD per year</span>
+		  </div>
+		</div>
+	  </div>
+	  
+	<div id="barchartPlot"></div>
 	<div id="doublecircularbarchartPlot"></div>
 </body>
 </html>

@@ -12,6 +12,20 @@ function processedData(data){
 }
 
 function distributionPlot(data) {
+    function updateLabel(type, value) {
+        const id = `income-${type}-value`;
+        document.getElementById(id).textContent = value + '%';
+    }
+
+    let total = data.length;
+    let greater_50k = data.filter(d => d.income === true).length;
+    let less_50k = data.filter(d => d.income === false).length;
+    let greater_50k_percent = (greater_50k / total) * 100;
+    let less_50k_percent = (less_50k / total) * 100;
+
+    updateLabel("true", greater_50k_percent.toFixed(2));
+    updateLabel("false", less_50k_percent.toFixed(2));
+
     const margin = { top: 10, right: 30, bottom: 30, left: 60 },
         width = 1200 - margin.left - margin.right,
         height = 400 - margin.top - margin.bottom;
@@ -35,12 +49,17 @@ function distributionPlot(data) {
 
     const bins = histogram(data);
 
+    bins.forEach(bin => {
+        bin.trueCount = bin.filter(d => d.income === true).length;
+        bin.falseCount = bin.filter(d => d.income === false).length;
+    });
+
     const x = d3.scaleLinear()
         .domain([bins[0].x0, bins[bins.length - 1].x1])
         .range([0, width]);
 
     const y = d3.scaleLinear()
-        .domain([0, d3.max(bins, d => d.length)])
+        .domain([0, d3.max(bins, d => d.trueCount + d.falseCount)])
         .range([height, 0]);
 
     svg.append("g")
@@ -53,15 +72,27 @@ function distributionPlot(data) {
 
     svg.append("g").call(d3.axisLeft(y));
 
-    svg.selectAll("rect")
+    svg.selectAll(".bar-false")
         .data(bins)
         .enter()
         .append("rect")
+        .attr("class", "bar-false")
         .attr("x", d => x(d.x0))
-        .attr("y", d => y(d.length))
+        .attr("y", d => y(d.falseCount))
         .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
-        .attr("height", d => height - y(d.length))
-        .style("fill", "#69b3a2");
+        .attr("height", d => height - y(d.falseCount))
+        .style("fill", "red");
+
+    svg.selectAll(".bar-true")
+        .data(bins)
+        .enter()
+        .append("rect")
+        .attr("class", "bar-true")
+        .attr("x", d => x(d.x0))
+        .attr("y", d => y(d.falseCount + d.trueCount))
+        .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+        .attr("height", d => y(d.falseCount) - y(d.falseCount + d.trueCount))
+        .style("fill", "green");
 
     svg.append("text")
         .attr("x", width / 2)
@@ -76,6 +107,7 @@ function distributionPlot(data) {
         .style("text-anchor", "middle")
         .text("Numbers of People");
 }
+
 
 const selectedFeature = "education.num";
 // selector function
