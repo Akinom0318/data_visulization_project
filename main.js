@@ -273,7 +273,6 @@ function doublecircularbarchartPlot(data, selectedKey){
         }), 
         d => d["occupation"]
     );
-    console.log(occupationData);
     
     const innerRadius = 100;
     const outerRadius = Math.min(width, height)-200;
@@ -286,7 +285,6 @@ function doublecircularbarchartPlot(data, selectedKey){
     const y = d3.scaleRadial()
     .range([innerRadius, outerRadius])
     .domain([0, d3.max(Array.from(occupationData.values()), d => d.count)]);
-    console.log(y.domain());
 
     const ybis = d3.scaleRadial()
     .range([innerRadius, innerRadius-50])
