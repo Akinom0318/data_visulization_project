@@ -4,7 +4,6 @@ async function loadData(){
 
 function processedData(data){
     data.forEach((person) => {
-        person["education.num"] = +person["education.num"];
         person.age = +person.age === 17 ? 18 : +person.age;
         person["hours.per.week"] = +person["hours.per.week"];
         person.income = person.income === ">50K" ? true : false;
@@ -203,10 +202,12 @@ function barchartPlot(data, selectedFeature) {
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x))
         .selectAll("text")
-        .style("text-anchor", "middle");
+        .style("text-anchor", "middle")
+        .style("font-size", "11px");
 
     svg.append("g")
-        .call(d3.axisLeft(y));
+        .call(d3.axisLeft(y))
+        .style("font-size", "15px");
 
     svg.selectAll(".bar")
         .data(processedData)
@@ -234,9 +235,9 @@ function barchartPlot(data, selectedFeature) {
             d3.select("#distributionPlot").select("svg").remove()
         })
         .transition()
-            .duration(1000) // 動畫持續時間 1000ms
-            .attr("y", d => y(d.count)) // 動態改變 y 座標
-            .attr("height", d => height - y(d.count)); // 動態改變高度
+            .duration(1000)
+            .attr("y", d => y(d.count)) 
+            .attr("height", d => height - y(d.count));
 
     svg.selectAll(".label")
         .data(processedData)
@@ -244,7 +245,7 @@ function barchartPlot(data, selectedFeature) {
         .attr("x", d => x(d.key) + x.bandwidth() / 2)
         .attr("y", d => y(d.count) - 5)
         .attr("text-anchor", "middle")
-        .text(d => d.count);
+        .text(d => d.count)
 }
 
 const selectedKey = null;
@@ -272,7 +273,6 @@ function doublecircularbarchartPlot(data, selectedKey){
         }), 
         d => d["occupation"]
     );
-    console.log(occupationData);
     
     const innerRadius = 100;
     const outerRadius = Math.min(width, height)-200;
@@ -285,7 +285,6 @@ function doublecircularbarchartPlot(data, selectedKey){
     const y = d3.scaleRadial()
     .range([innerRadius, outerRadius])
     .domain([0, d3.max(Array.from(occupationData.values()), d => d.count)]);
-    console.log(y.domain());
 
     const ybis = d3.scaleRadial()
     .range([innerRadius, innerRadius-50])
@@ -327,8 +326,8 @@ function doublecircularbarchartPlot(data, selectedKey){
     .join("path")
     .attr("fill", "red")
     .attr("d", d3.arc()
-        .innerRadius(innerRadius)  // 內圓的半徑固定
-        .outerRadius(innerRadius-1)  // 初始外圓半徑為最大值
+        .innerRadius(innerRadius)
+        .outerRadius(innerRadius-1)
         .startAngle(d => x(d[0]))
         .endAngle(d => x(d[0]) + x.bandwidth())
         .padAngle(0.01)
@@ -365,7 +364,8 @@ function doublecircularbarchartPlot(data, selectedKey){
     .attr("transform", function(d) {
         return (x(d[0]) + x.bandwidth() / 2 + Math.PI) % (2 * Math.PI) < Math.PI ? "rotate(180)" : "rotate(0)";
     })
-    .style("font-size", "11px")
+    .style("font-size", "13px")
+    .style("user-select","none")
     .attr("alignment-baseline", "middle");
 }
 
