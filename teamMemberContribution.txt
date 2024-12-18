@@ -1,0 +1,3 @@
+朱冠宇: PM, dataset, proposal draft, histogram chart implementation, link from barchart to histogram chart, link from double circular barchart to histogram chart, brush on histogram
+
+陳育渝: proposal design picture, barchart implementation, double circular barchart implementation

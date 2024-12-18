@@ -1,0 +1,3 @@
+The program requires three things: income.csv, index.html, main.js
+
+Just use the vscode extension to run it on local server or anything you did in homework 4.
