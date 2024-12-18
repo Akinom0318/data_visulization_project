@@ -23,9 +23,28 @@
 			<span id="unit">USD per year</span>
 		  </div>
 		</div>
-	  </div>
+	</div>
 	  
-	<div id="barchartPlot"></div>
-	<div id="doublecircularbarchartPlot"></div>
+	<div id="barchart-circularBarChart-container" style="display: flex; align-items: center;">
+		<div id="barchartPlot"></div>
+		<label for="dropdown">Choose an attribute:</label>
+		<select id="selector" name="selector">
+			<option value="sex">Sex</option>
+			<option value="relationship">Relationship</option>
+			<option value="education.num">Education</option>
+			<option value="race">Race</option>
+		</select>
+		<div id="doublecircularbarchartPlot"></div>
+	</div>
 </body>
 </html>
+
+<style>
+	select {
+		width: 200px;
+		padding: 5px;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		font-size: 16px;
+	}
+</style>

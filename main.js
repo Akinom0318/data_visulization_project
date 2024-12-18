@@ -11,10 +11,15 @@ function processedData(data){
     });
 }
 
+let selected_feature_value = null;
 function distributionPlot(data) {
     function updateLabel(type, value) {
         const id = `income-${type}-value`;
         document.getElementById(id).textContent = value + '%';
+    }
+
+    if(selected_feature_value != null){
+        data = data.filter(d => d[selectedFeature] === selected_feature_value);
     }
 
     let total = data.length;
@@ -58,8 +63,8 @@ function distributionPlot(data) {
         .domain([bins[0].x0, bins[bins.length - 1].x1])
         .range([0, width]);
 
-    const y = d3.scaleLinear()
-        .domain([0, d3.max(bins, d => d.trueCount + d.falseCount)])
+        const y = d3.scaleLinear()
+        .domain([0, d3.max(bins, d => d.trueCount + d.falseCount) || 1])
         .range([height, 0]);
 
     svg.append("g")
@@ -73,26 +78,76 @@ function distributionPlot(data) {
     svg.append("g").call(d3.axisLeft(y));
 
     svg.selectAll(".bar-false")
-        .data(bins)
-        .enter()
-        .append("rect")
-        .attr("class", "bar-false")
-        .attr("x", d => x(d.x0))
-        .attr("y", d => y(d.falseCount))
-        .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
-        .attr("height", d => height - y(d.falseCount))
-        .style("fill", "red");
+    .data(bins)
+    .enter()
+    .append("rect")
+    .attr("class", "bar-false")
+    .attr("x", d => x(d.x0))
+    .attr("y", height)
+    .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+    .attr("height", 0)
+    .style("fill", "red")
+    .transition()
+    .duration(1000)
+    .attr("y", d => y(d.falseCount)) 
+    .attr("height", d => height - y(d.falseCount)); 
 
     svg.selectAll(".bar-true")
-        .data(bins)
-        .enter()
-        .append("rect")
-        .attr("class", "bar-true")
-        .attr("x", d => x(d.x0))
-        .attr("y", d => y(d.falseCount + d.trueCount))
-        .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
-        .attr("height", d => y(d.falseCount) - y(d.falseCount + d.trueCount))
-        .style("fill", "green");
+    .data(bins)
+    .enter()
+    .append("rect")
+    .attr("class", "bar-true")
+    .attr("x", d => x(d.x0))
+    .attr("y", height)
+    .attr("width", d => Math.max(0, x(d.x1) - x(d.x0) - 1))
+    .attr("height", 0)
+    .style("fill", "green")
+    .transition()
+    .duration(1000)
+    .attr("y", d => y(d.falseCount + d.trueCount)) 
+    .attr("height", d => y(d.falseCount) - y(d.falseCount + d.trueCount));
+
+    const brush = d3.brushX()
+    .extent([[0, 0], [width, height]])
+    .on("start brush", brushed); 
+
+    svg.append("g")
+        .attr("class", "brush")
+        .call(brush);
+
+    function brushed(event) {
+        const selection = event.selection;
+        if (selection) {
+            const [x0, x1] = selection;
+            const selectedBins = bins.filter(d => {
+                const binLeft = x(d.x0);
+                const binRight = x(d.x1);
+                return (binLeft >= x0 && binLeft <= x1) || (binRight >= x0 && binRight <= x1);
+            });
+
+            svg.selectAll(".bar-false")
+                .style("fill", function (d) {
+                    return selectedBins.includes(d) ? "orange" : "red";
+                });
+            svg.selectAll(".bar-true")
+                .style("fill", function (d) {
+                    return selectedBins.includes(d) ? "lightgreen" : "green";
+                });
+
+            let total_bins = [];
+            selectedBins.forEach(bin => {
+                total_bins = total_bins.concat(bin);
+            });
+            let selected_greater_50k = total_bins.filter(d => d.income === true).length;
+            let selected_less_50k = total_bins.filter(d => d.income === false).length;
+            updateLabel("true", ((selected_greater_50k / total) * 100).toFixed(2));
+            updateLabel("false", ((selected_less_50k / total) * 100).toFixed(2));
+            if (total_bins.length === 0) {
+                updateLabel("true", greater_50k_percent.toFixed(2));
+                updateLabel("false", less_50k_percent.toFixed(2));
+            }
+        }
+    }
 
     svg.append("text")
         .attr("x", width / 2)
@@ -109,8 +164,7 @@ function distributionPlot(data) {
 }
 
 
-const selectedFeature = "education.num";
-// selector function
+let selectedFeature = "sex";
 function barchartPlot(data, selectedFeature) {
     const margin = { top: 30, right: 100, bottom: 30, left: 60 },
         width = 1200 - margin.left - margin.right,
@@ -134,7 +188,7 @@ function barchartPlot(data, selectedFeature) {
         count: count 
     }));
     processedData.sort((a, b) => a.key - b.key);
-    console.log(processedData);
+    //console.log(processedData);
 
     const x = d3.scaleBand()
         .domain(processedData.map(d => d.key))
@@ -164,9 +218,20 @@ function barchartPlot(data, selectedFeature) {
         .attr("height", 0)
         .attr("fill", "#69b3a2")
         .style("cursor", "pointer")
+        .style("stroke", "none")
+        .style("stroke-width", "2px")
         .on("click", function(event, d) {
+            svg.selectAll(".bar")
+            .style("stroke", "none")
+            .style("stroke-width", "2px");
+            d3.select(this)
+            .style("stroke", "black")
+            .style("stroke-width", "4px");
+            selected_feature_value = d.key;
             doublecircularbarchartPlot(data, d.key)
             d3.select("#doublecircularbarchartPlot").select("svg").remove()
+            distributionPlot(data.filter(data => data[selectedFeature] === d.key));
+            d3.select("#distributionPlot").select("svg").remove()
         })
         .transition()
             .duration(1000) // 動畫持續時間 1000ms
@@ -184,10 +249,10 @@ function barchartPlot(data, selectedFeature) {
 
 const selectedKey = null;
 function doublecircularbarchartPlot(data, selectedKey){
-    console.log(selectedKey, selectedFeature);
+    //console.log(selectedKey, selectedFeature);
     const margin = { top: 10, right: 30, bottom: 30, left: 60 },
-        width = 1200 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
+        width = 500 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
 
     const svg = d3.select("#doublecircularbarchartPlot")
         .append("svg")
@@ -239,6 +304,11 @@ function doublecircularbarchartPlot(data, selectedKey){
         .endAngle(d => x(d[0]) + x.bandwidth())
         .padAngle(0.01)
         .padRadius(innerRadius))
+    .style("cursor", "pointer")
+    .on("click", (event, d) => {
+        distributionPlot(data.filter(data => data["occupation"] === d[0]));
+        d3.select("#distributionPlot").select("svg").remove()
+    })
     .transition()
     .duration(1000)
     .attr("d", d3.arc()
@@ -248,6 +318,7 @@ function doublecircularbarchartPlot(data, selectedKey){
         .endAngle(d => x(d[0]) + x.bandwidth())
         .padAngle(0.01)
         .padRadius(innerRadius));
+
 
     // inner circle
     svg.append("g")
@@ -262,6 +333,12 @@ function doublecircularbarchartPlot(data, selectedKey){
         .endAngle(d => x(d[0]) + x.bandwidth())
         .padAngle(0.01)
         .padRadius(innerRadius))
+    .style("cursor", "pointer")
+    .on("click", (event, d) => {
+        distributionPlot(data.filter(data => data["occupation"] === d[0]));
+        d3.select("#distributionPlot").select("svg").remove()
+
+    })
     .transition()  // 啟用過渡動畫
     .duration(1000)  // 設定動畫持續時間
     .attr("d", d3.arc()
@@ -300,4 +377,16 @@ document.addEventListener("DOMContentLoaded", async function(){
     distributionPlot(data);
     barchartPlot(data, selectedFeature);
     doublecircularbarchartPlot(data, selectedKey);
+
+    const selector = document.getElementById("selector");
+    selector.addEventListener("change", function(event){
+        selectedFeature = event.target.value;
+        d3.select("#barchartPlot").select("svg").remove();
+        barchartPlot(data, selectedFeature);
+        d3.select("#doublecircularbarchartPlot").select("svg").remove();
+        doublecircularbarchartPlot(data, selectedKey);
+        d3.select("#distributionPlot").select("svg").remove();
+        selected_feature_value = null;
+        distributionPlot(data);
+    });
 });
