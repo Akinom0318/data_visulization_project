@@ -5,6 +5,7 @@ async function loadData(){
 function processedData(data){
     data.forEach((person) => {
         person.age = +person.age === 17 ? 18 : +person.age;
+        person["education.num"] = +person["education.num"];
         person["hours.per.week"] = +person["hours.per.week"];
         person.income = person.income === ">50K" ? true : false;
     });
